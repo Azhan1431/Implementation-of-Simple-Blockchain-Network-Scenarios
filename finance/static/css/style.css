@@ -1,0 +1,35 @@
+/* 区块链金融系统样式 */
+body {
+    background-color: #f8f9fa;
+    padding-bottom: 50px;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    margin-bottom: 20px;
+}
+
+.card-header {
+    font-weight: bold;
+}
+
+pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #dee2e6;
+}
+
+.alert {
+    margin-top: 15px;
+}
+
+.btn {
+    margin-right: 5px;
+}
+
+.form-control {
+    margin-bottom: 10px;
+}

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投票结果</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .vote-info { margin-bottom: 20px; }
+        .results { margin: 20px 0; }
+        .result-item { 
+            margin: 10px 0; 
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+        .result-bar {
+            height: 20px;
+            background: #4CAF50;
+            margin-top: 5px;
+            border-radius: 3px;
+        }
+        a { color: #4CAF50; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div id="resultsContainer">
+        <h1 id="voteTitle">加载中...</h1>
+        <div class="vote-info">
+            <p id="voteDescription"></p>
+            <p>截止时间: <span id="endTime"></span></p>
+            <p>总票数: <span id="totalVotes">0</span></p>
+        </div>
+        
+        <div class="results" id="resultsList">
+            <!-- 结果将在这里动态生成 -->
+        </div>
+        
+        <a href="/">返回首页</a>
+    </div>
+
+    <script>
+        // 从URL获取投票ID
+        const urlParams = new URLSearchParams(window.location.search);
+        const voteId = urlParams.get('id');
+
+        // 获取投票结果
+        async function loadResults() {
+            try {
+                // 获取投票详情
+                const voteResponse = await fetch(`/get_vote/${voteId}`);
+                const voteResult = await voteResponse.json();
+                
+                if (voteResponse.ok) {
+                    const vote = voteResult.data;
+                    document.getElementById('voteTitle').textContent = vote.title + " - 结果";
+                    document.getElementById('voteDescription').textContent = vote.description;
+                    document.getElementById('endTime').textContent = vote.end_time;
+                    
+                    // 计算总票数
+                    const totalVotes = vote.options.reduce((sum, opt) => sum + opt.vote_count, 0);
+                    document.getElementById('totalVotes').textContent = totalVotes;
+                    
+                    // 生成结果展示
+                    const resultsList = document.getElementById('resultsList');
+                    vote.options.forEach(option => {
+                        const percentage = totalVotes > 0 ? Math.round((option.vote_count / totalVotes) * 100) : 0;
+                        
+                        const resultItem = document.createElement('div');
+                        resultItem.className = 'result-item';
+                        resultItem.innerHTML = `
+                            <div>${option.content}</div>
+                            <div>${option.vote_count} 票 (${percentage}%)</div>
+                            <div class="result-bar" style="width: ${percentage}%"></div>
+                        `;
+                        resultsList.appendChild(resultItem);
+                    });
+                } else {
+                    alert('获取投票结果失败: ' + voteResult.message);
+                }
+            } catch (error) {
+                alert('加载投票结果时出错: ' + error.message);
+            }
+        }
+
+        // 页面加载时获取结果
+        loadResults();
+    </script>
+</body>
+</html>

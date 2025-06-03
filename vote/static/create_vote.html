@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>创建投票</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; }
+        input, textarea { width: 100%; padding: 8px; box-sizing: border-box; }
+        button { background: #4CAF50; color: white; border: none; padding: 10px 15px; cursor: pointer; }
+        .option { display: flex; margin-bottom: 10px; }
+        .option input { flex: 1; margin-right: 10px; }
+    </style>
+</head>
+<body>
+    <h1>创建新投票</h1>
+    <form id="voteForm">
+        <div class="form-group">
+            <label>标题</label>
+            <input type="text" id="title" required>
+        </div>
+        <div class="form-group">
+            <label>描述</label>
+            <textarea id="description" rows="3" required></textarea>
+        </div>
+        <div class="form-group">
+            <label>投票选项</label>
+            <div id="options">
+                <div class="option">
+                    <input type="text" placeholder="选项内容" required>
+                    <button type="button" class="remove-option" aria-label="删除此选项">删除</button>
+                </div>
+            </div>
+            <button type="button" id="addOption" title="添加新的投票选项">添加选项</button>
+        </div>
+        <div class="form-group">
+            <label>投票持续时间(小时)</label>
+            <input type="number" id="duration" min="1" value="24" required>
+        </div>
+        <button type="submit" title="提交并创建新投票">创建投票</button>
+    </form>
+
+    <script>
+        document.getElementById('addOption').addEventListener('click', function() {
+            const optionDiv = document.createElement('div');
+            optionDiv.className = 'option';
+            optionDiv.innerHTML = `
+                <input type="text" placeholder="选项内容" required>
+                <button type="button" class="remove-option" aria-label="删除此选项">删除</button>
+            `;
+            document.getElementById('options').appendChild(optionDiv);
+        });
+
+        document.getElementById('options').addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-option')) {
+                if (document.querySelectorAll('.option').length > 1) {
+                    e.target.parentElement.remove();
+                } else {
+                    alert('至少需要一个选项');
+                }
+            }
+        });
+
+        document.getElementById('voteForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const options = Array.from(document.querySelectorAll('#options input'))
+                .map(input => input.value.trim())
+                .filter(text => text !== '');
+                
+            if (options.length < 1) {
+                alert('请至少添加一个有效选项');
+                return;
+            }
+
+            const voteData = {
+                title: document.getElementById('title').value.trim(),
+                description: document.getElementById('description').value.trim(),
+                options: options,
+                creator: '当前用户', // 实际应用中应从登录信息获取
+                duration: parseInt(document.getElementById('duration').value) * 3600
+            };
+
+            try {
+                const response = await fetch('/api/create_vote', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(voteData)
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    alert('投票创建成功!');
+                    window.location.href = `/vote.html?id=${result.data.vote_id}`;
+                } else {
+                    alert(`创建失败: ${result.message}`);
+                }
+            } catch (error) {
+                alert('创建投票时出错: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>

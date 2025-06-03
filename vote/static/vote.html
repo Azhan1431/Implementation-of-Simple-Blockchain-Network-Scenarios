@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>参与投票</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .vote-info { margin-bottom: 20px; }
+        .options { margin: 15px 0; }
+        .option { margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #4CAF50; color: white; border: none; padding: 10px 15px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div id="voteContainer">
+        <h1 id="voteTitle">加载中...</h1>
+        <div class="vote-info">
+            <p id="voteDescription"></p>
+            <p>截止时间: <span id="endTime"></span></p>
+        </div>
+        
+        <form id="voteForm">
+            <div class="options" id="optionsContainer">
+                <!-- 选项将在这里动态生成 -->
+            </div>
+            
+            <div class="form-group">
+                <label for="voterAddress">您的钱包地址</label>
+                <input type="text" id="voterAddress" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">投票密码</label>
+                <input type="password" id="password" required placeholder="请输入投票密码">
+            </div>
+            
+            <button type="submit" title="提交您的投票">提交投票</button>
+        </form>
+    </div>
+
+    <script>
+        // 从URL获取投票ID
+        const urlParams = new URLSearchParams(window.location.search);
+        const voteId = urlParams.get('id');
+
+        // 获取投票详情
+        async function loadVoteDetails() {
+            try {
+                const response = await fetch(`/api/get_vote/${voteId}`);
+                const result = await response.json();
+                
+                if (response.ok) {
+                    const vote = result.data;
+                    document.getElementById('voteTitle').textContent = vote.title;
+                    document.getElementById('voteDescription').textContent = vote.description;
+                    document.getElementById('endTime').textContent = vote.end_time;
+                    
+                    // 生成选项
+                    const optionsContainer = document.getElementById('optionsContainer');
+                    vote.options.forEach(option => {
+                        const optionDiv = document.createElement('div');
+                        optionDiv.className = 'option';
+                        optionDiv.innerHTML = `
+                            <input type="radio" name="voteOption" id="opt_${option.option_id}" 
+                                   value="${option.option_id}" required>
+                            <label for="opt_${option.option_id}">${option.content}</label>
+                        `;
+                        optionsContainer.appendChild(optionDiv);
+                    });
+                } else {
+                    alert('获取投票详情失败: ' + result.message);
+                }
+            } catch (error) {
+                alert('加载投票详情时出错: ' + error.message);
+            }
+        }
+
+        // 提交投票
+        document.getElementById('voteForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const selectedOption = document.querySelector('input[name="voteOption"]:checked');
+            if (!selectedOption) {
+                alert('请选择一个投票选项');
+                return;
+            }
+            
+            const password = document.getElementById('password').value.trim();
+            if (!password) {
+                alert('请输入投票密码');
+                return;
+            }
+
+            const voteData = {
+                vote_id: voteId,
+                option_id: selectedOption.value,
+                voter: document.getElementById('voterAddress').value.trim(),
+                password: password
+            };
+
+            console.log('提交投票数据:', voteData);
+
+            try {
+                const response = await fetch('/api/cast_vote', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(voteData)
+                });
+                
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Expected JSON but got: ${text.substring(0, 100)}`);
+                }
+                
+                const result = await response.json();
+                if (response.ok) {
+                    alert('投票成功!');
+                    window.location.href = `/results.html?id=${voteId}`;
+                } else {
+                    alert(`投票失败: ${result.message}`);
+                }
+            } catch (error) {
+                console.error('投票错误详情:', error);
+                alert(`投票时出错: ${error.message}\n请检查控制台查看详情`);
+            }
+        });
+
+        // 页面加载时获取投票详情
+        loadVoteDetails();
+    </script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投票结果</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .vote-info { margin-bottom: 20px; }
+        .results { margin: 15px 0; }
+        .result-item { margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        .progress-bar { height: 20px; background: #f0f0f0; border-radius: 4px; margin-top: 5px; }
+        .progress { height: 100%; background: #4CAF50; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div id="resultsContainer">
+        <h1 id="voteTitle">加载中...</h1>
+        <div class="vote-info">
+            <p id="voteDescription"></p>
+            <p>截止时间: <span id="endTime"></span></p>
+        </div>
+        
+        <div class="results" id="resultsList">
+            <!-- 结果将在这里动态生成 -->
+        </div>
+    </div>
+
+    <script>
+        // 从URL获取投票ID
+        const urlParams = new URLSearchParams(window.location.search);
+        const voteId = urlParams.get('id');
+
+        // 存储投票结果到本地
+        function cacheVoteResults(voteId, data) {
+            localStorage.setItem(`vote_${voteId}`, JSON.stringify(data));
+            localStorage.setItem(`vote_${voteId}_timestamp`, Date.now());
+        }
+
+        // 从本地获取缓存
+        function getCachedResults(voteId) {
+            const cached = localStorage.getItem(`vote_${voteId}`);
+            const timestamp = localStorage.getItem(`vote_${voteId}_timestamp`);
+            
+            if (cached && timestamp && (Date.now() - timestamp < 3600000)) { 
+                return JSON.parse(cached);
+            }
+            return null;
+        }
+
+        // 获取投票结果
+        async function loadResults() {
+            const cached = getCachedResults(voteId);
+            if (cached) {
+                displayResults(cached);
+            }
+
+            try {
+                const response = await fetch(`/api/get_vote_results/${voteId}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                // 检查响应内容类型
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`服务器返回了非JSON数据: ${text.substring(0, 100)}`);
+                }
+
+                const result = await response.json();
+                cacheVoteResults(voteId, result);
+                
+                if (response.ok) {
+                    // 显示投票基本信息
+                    document.getElementById('voteTitle').textContent = result.data.title;
+                    document.getElementById('voteDescription').textContent = result.data.description;
+                    document.getElementById('endTime').textContent = result.data.end_time;
+
+                    // 显示投票结果
+                    const resultsContainer = document.getElementById('resultsList');
+                    let totalVotes = 0;
+                    
+                    // 计算总票数
+                    result.data.options.forEach(option => {
+                        totalVotes += option.votes;
+                    });
+
+                    // 生成结果项
+                    result.data.options.forEach(option => {
+                        const percentage = totalVotes > 0 ? Math.round((option.votes / totalVotes) * 100) : 0;
+                        
+                        const resultDiv = document.createElement('div');
+                        resultDiv.className = 'result-item';
+                        resultDiv.innerHTML = `
+                            <div>${option.content}: ${option.votes} 票 (${percentage}%)</div>
+                            <div class="progress-bar">
+                                <div class="progress" style="width: ${percentage}%"></div>
+                            </div>
+                        `;
+                        resultsContainer.appendChild(resultDiv);
+                    });
+                } else {
+                    alert('获取投票结果失败: ' + result.message);
+                }
+            } catch (error) {
+                console.error('加载结果错误:', error);
+                alert('加载投票结果时出错: ' + error.message);
+            }
+        }
+
+        // 页面加载时获取投票结果
+        loadResults();
+    </script>
+</body>
+</html>

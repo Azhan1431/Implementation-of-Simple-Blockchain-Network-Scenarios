@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>区块链浏览器</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .block-card {
+            margin-bottom: 15px;
+            cursor: pointer;
+        }
+        .block-card:hover {
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+        #realtime-container {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="text-center mb-4">区块链浏览器</h1>
+        
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>区块链信息</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>网络拓扑图</h5>
+                                <div id="network-graph" style="height: 300px;"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>区块链结构图</h5>
+                                <div id="blockchain-graph" style="height: 300px;"></div>
+                            </div>
+                        </div>
+                        <div class="row mt-4">
+                            <div class="col-md-12">
+                                <h5>区块列表</h5>
+                                <div id="chain-container" class="row"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>实时更新</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="realtime-container"></div>
+                    </div>
+                </div>
+                
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>交易查询</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="input-group mb-3">
+                            <input type="text" id="tx-search" class="form-control" placeholder="输入交易ID">
+                            <button class="btn btn-primary" onclick="searchTx()">查询</button>
+                        </div>
+                        <div id="tx-result"></div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>节点状态</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="peers-container"></div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h5>健康状态</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="health-container"></div>
+                    </div>
+                </div>
+                
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5>版权登记</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="nav nav-tabs" id="copyrightTab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="upload-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#upload-pane" type="button" role="tab">
+                                    上传作品
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="query-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#query-pane" type="button" role="tab">
+                                    查询版权
+                                </button>
+                            </li>
+                        </ul>
+                        
+                        <div class="tab-content mt-3" id="copyrightTabContent">
+                            <div class="tab-pane fade show active" id="upload-pane" role="tabpanel">
+                                <form id="upload-form">
+                                    <div class="mb-3">
+                                        <label class="form-label">作者</label>
+                                        <input type="text" class="form-control" id="author" 
+                                               placeholder="请输入作者名称" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">作品描述</label>
+                                        <textarea class="form-control" id="description" rows="2"
+                                                  placeholder="请输入作品描述"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">私钥(可选)</label>
+                                        <input type="text" class="form-control" id="private-key"
+                                               placeholder="请输入私钥(可选)">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">上传文件</label>
+                                        <input type="file" class="form-control" id="work-file"
+                                               aria-label="上传作品文件">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">或输入文本内容</label>
+                                        <textarea class="form-control" id="work-text" rows="3"
+                                                  placeholder="请输入作品文本内容"></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">登记版权</button>
+                                </form>
+                                <div id="upload-result" class="mt-3"></div>
+                            </div>
+                            
+                            <div class="tab-pane fade" id="query-pane" role="tabpanel">
+                                <form id="query-form">
+                                    <div class="mb-3">
+                                        <label class="form-label">作品哈希</label>
+                                        <input type="text" class="form-control" id="query-hash"
+                                               placeholder="请输入作品哈希值">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">或作者名称</label>
+                                        <input type="text" class="form-control" id="query-author"
+                                               placeholder="请输入作者名称">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">查询</button>
+                                </form>
+                                <div id="query-result" class="mt-3"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 处理版权登记表单提交
+        document.getElementById('upload-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const author = document.getElementById('author').value;
+            const description = document.getElementById('description').value;
+            const privateKey = document.getElementById('private-key').value;
+            const fileInput = document.getElementById('work-file');
+            const textInput = document.getElementById('work-text').value;
+            
+            const formData = new FormData();
+            formData.append('author', author);
+            formData.append('description', description);
+            if (privateKey) formData.append('private_key', privateKey);
+            
+            if (fileInput.files.length > 0) {
+                formData.append('file', fileInput.files[0]);
+            } else if (textInput) {
+                formData.append('text', textInput);
+            } else {
+                alert('请上传文件或输入文本内容');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/upload_work', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (data.code === 200) {
+                    document.getElementById('upload-result').innerHTML = `
+                        <div class="alert alert-success">
+                            <p>版权登记成功！</p>
+                            <p><strong>交易ID:</strong> ${data.data.tx_id}</p>
+                            <p><strong>作品哈希:</strong> ${data.data.work_hash}</p>
+                            <p><strong>登记时间:</strong> ${data.data.timestamp}</p>
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('upload-result').innerHTML = `
+                        <div class="alert alert-danger">
+                            版权登记失败: ${data.message || '未知错误'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('upload-result').innerHTML = `
+                    <div class="alert alert-danger">
+                        请求失败: ${error.message}
+                    </div>
+                `;
+            }
+        });
+        
+        // 处理版权查询表单提交
+        document.getElementById('query-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const workHash = document.getElementById('query-hash').value;
+            const author = document.getElementById('query-author').value;
+            
+            if (!workHash && !author) {
+                alert('请输入作品哈希或作者名称');
+                return;
+            }
+            
+            try {
+                const params = new URLSearchParams();
+                if (workHash) params.append('work_hash', workHash);
+                if (author) params.append('author', author);
+                
+                const response = await fetch(`/query_work?${params.toString()}`);
+                const data = await response.json();
+                
+                if (data.code === 200 && data.data.length > 0) {
+                    let html = '<div class="alert alert-success"><h6>查询结果</h6>';
+                    data.data.forEach(work => {
+                        html += `
+                            <div class="mb-3 p-2 border-bottom">
+                                <p><strong>作品哈希:</strong> ${work.work_hash}</p>
+                                <p><strong>作者:</strong> ${work.author}</p>
+                                <p><strong>类型:</strong> ${work.work_type}</p>
+                                <p><strong>描述:</strong> ${work.description}</p>
+                                <p><strong>登记时间:</strong> ${work.timestamp}</p>
+                                <p><strong>交易ID:</strong> ${work.id}</p>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    document.getElementById('query-result').innerHTML = html;
+                } else {
+                    document.getElementById('query-result').innerHTML = `
+                        <div class="alert alert-info">
+                            未找到匹配的版权登记记录
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('query-result').innerHTML = `
+                    <div class="alert alert-danger">
+                        查询失败: ${error.message}
+                    </div>
+                `;
+            }
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script>
+        // 初始化WebSocket连接
+        const socket = io();
+
+        // 实时交易和区块显示
+        function setupRealtimeUpdates() {
+            const realtimeContainer = document.getElementById('realtime-container');
+            
+            socket.on('new_transaction', (tx) => {
+                const txHtml = `
+                    <div class="alert alert-info mb-2">
+                        <strong>新交易</strong>
+                        <p>发送方: ${tx.sender.substring(0, 10)}...</p>
+                        <p>接收方: ${tx.recipient.substring(0, 10)}...</p>
+                        <p>内容: ${tx.data}</p>
+                    </div>
+                `;
+                realtimeContainer.innerHTML = txHtml + realtimeContainer.innerHTML;
+            });
+
+            socket.on('new_block', (block) => {
+                    const blockHtml = `
+                    <div class="alert alert-success mb-2">
+                        <strong>新区块 #${block.index || 0}</strong>
+                        <p>哈希: ${block.block_hash ? block.block_hash.substring(0, 20) + '...' : '无'}</p>
+                        <p>交易数: ${block.data ? block.data.length : 0}</p>
+                    </div>
+                `;
+                realtimeContainer.innerHTML = blockHtml + realtimeContainer.innerHTML;
+                
+                // 刷新区块链显示
+                document.getElementById('chain-container').innerHTML = '';
+                loadChain();
+                loadHealth();
+            });
+        }
+
+        // 加载区块链数据
+        async function loadChain() {
+            try {
+                console.log('开始加载区块链数据...');
+                const response = await fetch('/chain');
+                if (!response.ok) {
+                    console.error('网络响应不正常:', response.status);
+                    throw new Error('网络响应不正常');
+                }
+                
+                const data = await response.json();
+                console.log('获取到区块链数据:', data);
+                
+                const container = document.getElementById('chain-container');
+                container.innerHTML = ''; // 清空容器
+                
+                if (!data.data || data.data.length === 0) {
+                    console.log('没有区块数据');
+                    container.innerHTML = '<div class="alert alert-info">暂无区块数据</div>';
+                    return;
+                }
+
+                // 按区块索引排序
+                data.data.sort((a, b) => a.index - b.index);
+                console.log('排序后的区块数据:', data.data);
+                
+                // 渲染区块列表
+                data.data.forEach(block => {
+                    console.log('渲染区块:', block.index);
+                    const blockHtml = `
+                        <div class="card block-card mb-3" onclick="showBlockDetail(${block.index})">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="card-title mb-0">区块 #${block.index}</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text">
+                                    <strong>哈希:</strong> ${block.block_hash ? block.block_hash.substring(0, 20) + '...' : '无'}<br>
+                                    <strong>前哈希:</strong> ${block.previous_hash ? block.previous_hash.substring(0, 20) + '...' : '无'}<br>
+                                    <strong>交易数:</strong> ${block.data ? block.data.length : 0}<br>
+                                    <strong>时间:</strong> ${block.timestamp ? new Date(block.timestamp).toLocaleString() : '未知'}
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                    container.innerHTML += blockHtml;
+                });
+
+                console.log('开始渲染区块结构图');
+                // 渲染区块结构图
+                renderBlockchainGraph(data.data);
+                console.log('区块链数据加载完成');
+            } catch (error) {
+                console.error('加载区块链数据失败:', error);
+                document.getElementById('chain-container').innerHTML = 
+                    '<div class="alert alert-danger">加载区块数据失败，请刷新重试</div>';
+            }
+        }
+
+        // 渲染区块链结构图
+        async function renderBlockchainGraph(blocks, peerName = null, isSyncAnimation = false) {
+            const chart = echarts.init(document.getElementById('blockchain-graph'));
+            
+            // 获取当前节点的最新区块高度
+            let currentPeerHeight = 0;
+            if (peerName) {
+                try {
+                    const healthRes = await fetch(`/peer_health?name=${peerName}`);
+                    const healthData = await healthRes.json();
+                    currentPeerHeight = healthData.data.block_height || 0;
+                } catch (e) {
+                    console.error('获取节点高度失败:', e);
+                }
+            }
+
+            const nodes = blocks.map(block => ({
+                id: block.block_hash || '',
+                name: `区块 #${block.index || 0}`,
+                symbolSize: 30,
+                itemStyle: {
+                    color: block.index === 0 ? '#ee6666' : 
+                          block.index <= currentPeerHeight ? '#5470c6' : '#999'
+                },
+                label: {
+                    show: true,
+                    formatter: `#${block.index || 0}\n${block.block_hash ? block.block_hash.substring(0, 8) + '...' : '无'}`
+                },
+                blockData: block
+            }));
+
+            const links = [];
+            for (let i = 1; i < blocks.length; i++) {
+                links.push({
+                    source: blocks[i].previous_hash,
+                    target: blocks[i].block_hash,
+                    lineStyle: {
+                        color: blocks[i].index <= currentPeerHeight ? '#91cc75' : '#ddd',
+                        width: 2,
+                        curveness: 0.2
+                    }
+                });
+            }
+
+            const option = {
+                animationDuration: 1000,
+                animationEasing: 'cubicInOut',
+                tooltip: {
+                    formatter: params => {
+                        if (!params || !params.data || !params.data.blockData) {
+                            return '无区块数据';
+                        }
+                        const block = params.data.blockData;
+                        try {
+                            return `
+                                <strong>区块 #${block.index}</strong><br>
+                                哈希: ${block.block_hash ? block.block_hash.substring(0, 20) + '...' : '无'}<br>
+                                前哈希: ${block.previous_hash ? block.previous_hash.substring(0, 20) + '...' : '无'}<br>
+                                交易数: ${block.data ? block.data.length : 0}<br>
+                                时间: ${block.timestamp || '未知'}
+                            `;
+                        } catch (e) {
+                            console.error('tooltip formatter error:', e);
+                            return '区块数据格式错误';
+                        }
+                    }
+                },
+                series: [{
+                    type: 'graph',
+                    layout: 'circular',
+                    focusNodeAdjacency: true,
+                    data: nodes,
+                    links: links,
+                    roam: true,
+                    label: {
+                        position: 'right',
+                        show: true
+                    },
+                    lineStyle: {
+                        color: 'source',
+                        curveness: 0.3
+                    },
+                    emphasis: {
+                        focus: 'adjacency',
+                        lineStyle: {
+                            width: 3
+                        }
+                    }
+                }]
+            };
+
+            chart.setOption(option);
+            window.addEventListener('resize', function() {
+                chart.resize();
+            });
+
+            // 添加区块同步动画
+            if ((peerName || isSyncAnimation) && currentPeerHeight > 0) {
+                animateBlockSync(chart, blocks, currentPeerHeight);
+            }
+        }
+
+        // 区块同步动画
+        function animateBlockSync(chart, blocks, targetHeight) {
+            let currentHeight = 0;
+            const interval = setInterval(() => {
+                try {
+                    if (currentHeight >= targetHeight) {
+                        clearInterval(interval);
+                        return;
+                    }
+                    
+                    currentHeight++;
+                    const option = chart.getOption();
+                    
+                    if (option && option.series && option.series[0]) {
+                        // 更新节点颜色
+                        if (option.series[0].data) {
+                            option.series[0].data.forEach(node => {
+                                if (node && node.blockData && node.blockData.index <= currentHeight) {
+                                    node.itemStyle = node.itemStyle || {};
+                                    node.itemStyle.color = node.blockData.index === 0 ? '#ee6666' : '#5470c6';
+                                }
+                            });
+                        }
+                        
+                        // 更新连接线颜色
+                        if (option.series[0].links) {
+                            option.series[0].links.forEach(link => {
+                                if (link && link.target && link.target.blockData && 
+                                    link.target.blockData.index <= currentHeight) {
+                                    link.lineStyle = link.lineStyle || {};
+                                    link.lineStyle.color = '#91cc75';
+                                }
+                            });
+                        }
+                        
+                        chart.setOption(option);
+                    }
+                } catch (error) {
+                    console.error('区块同步动画错误:', error);
+                    clearInterval(interval);
+                }
+            }, 200);
+        }
+
+        // 节点点击事件
+        function setupNodeClick(networkChart) {
+            networkChart.on('click', params => {
+                if (!params || !params.data) return;
+                
+                try {
+                    // 高亮选中的节点
+                    const option = networkChart.getOption();
+                    if (option && option.series && option.series[0] && option.series[0].data) {
+                        option.series[0].data.forEach(node => {
+                            if (node) {
+                                node.itemStyle = {
+                                    color: node.id === params.data.id ? '#ffcc00' : 
+                                          (node.status === 'syncing' ? '#91cc75' :
+                                          (node.status === 'outdated' ? '#ee6666' : '#5470c6'))
+                                };
+                            }
+                        });
+                        networkChart.setOption(option);
+                    }
+
+                    // 更新节点状态提示
+                    const titleElement = document.querySelector('#blockchain-graph h5');
+                    if (titleElement && params.data.name && params.data.height) {
+                        titleElement.textContent = 
+                            `节点 ${params.data.name} 的区块链结构 (高度: ${params.data.height})`;
+                    }
+
+                    // 加载该节点的区块链
+                    if (params.data.name) {
+                        fetch(`/peer_chain?name=${params.data.name}`)
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data && data.data) {
+                                    renderBlockchainGraph(data.data, params.data.name);
+                                }
+                            })
+                            .catch(console.error);
+                    }
+                } catch (error) {
+                    console.error('节点点击处理错误:', error);
+                }
+            });
+
+            // 监听新区块事件
+            socket.on('new_block', (block) => {
+                // 更新网络拓扑图中各节点状态
+                fetch('/peers')
+                    .then(res => res.json())
+                    .then(data => {
+                        const networkChart = echarts.getInstanceByDom(document.getElementById('network-graph'));
+                        const option = networkChart.getOption();
+                        option.series[0].data = data.data.map(peer => ({
+                            id: peer.name,
+                            name: peer.name,
+                            host: peer.host,
+                            port: peer.port,
+                            height: peer.height,
+                            status: peer.status,
+                            symbolSize: 30,
+                            itemStyle: {
+                                color: peer.status === 'syncing' ? '#91cc75' :
+                                      peer.status === 'outdated' ? '#ee6666' : '#5470c6'
+                            }
+                        }));
+                        networkChart.setOption(option);
+                    });
+
+                // 播放区块同步动画
+                fetch('/chain')
+                    .then(res => res.json())
+                    .then(data => renderBlockchainGraph(data.data, null, true));
+            });
+        }
+
+        // 加载节点信息
+        async function loadPeers() {
+            const response = await fetch('/peers');
+            const data = await response.json();
+            const container = document.getElementById('peers-container');
+            
+            data.data.forEach(peer => {
+                const peerHtml = `
+                    <div class="mb-2">
+                        <strong>${peer.name}</strong><br>
+                        <small>${peer.host}:${peer.port}</small>
+                    </div>
+                `;
+                container.innerHTML += peerHtml;
+            });
+        }
+
+        // 查询交易
+        async function searchTx() {
+            const txid = document.getElementById('tx-search').value;
+            if (!txid) return;
+            
+            const response = await fetch(`/transaction/${txid}`);
+            const data = await response.json();
+            const container = document.getElementById('tx-result');
+            
+            if (data.code === 200) {
+                const tx = data.data;
+                container.innerHTML = `
+                    <div class="alert alert-success">
+                        <h6>交易详情</h6>
+                        <p>发送方: ${tx.sender.substring(0, 10)}...</p>
+                        <p>接收方: ${tx.recipient.substring(0, 10)}...</p>
+                        <p>内容: ${tx.data}</p>
+                        <p>时间: ${tx.timestamp}</p>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="alert alert-danger">
+                        未找到交易
+                    </div>
+                `;
+            }
+        }
+
+        // 显示区块详情
+        function showBlockDetail(index) {
+            fetch(`/block_query?id=${index}`)
+                .then(res => res.json())
+                .then(data => {
+                    const modalHtml = `
+                        <div class="modal fade" id="blockDetailModal" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">区块 #${data.index} 详情</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                    <p><strong>哈希:</strong> ${data.block_hash || '无'}</p>
+                                    <p><strong>前哈希:</strong> ${data.previous_hash || '无'}</p>
+                                    <p><strong>时间戳:</strong> ${data.timestamp || '未知'}</p>
+                                    <p><strong>难度:</strong> ${data.difficulty || '未知'}</p>
+                                    <p><strong>Nonce:</strong> ${data.nonce || '未知'}</p>
+                                        <h6 class="mt-3">交易列表</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-striped">
+                                                <thead>
+                                                    <tr>
+                                                        <th>ID</th>
+                                                        <th>发送方</th>
+                                                        <th>接收方</th>
+                                                        <th>内容</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    ${data.data.map(tx => `
+                                                        <tr>
+                                                            <td>
+                                                                <div style="max-width: 200px; overflow-wrap: break-word;">
+                                                                    ${tx.id}
+                                                                    <button class="btn btn-sm btn-outline-secondary ms-2" 
+                                                                            onclick="navigator.clipboard.writeText('${tx.id}')">
+                                                                        复制
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                            <td>${tx.sender}</td>
+                                                            <td>${tx.recipient}</td>
+                                                            <td>${tx.data}</td>
+                                                        </tr>
+                                                    `).join('')}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    const modalContainer = document.createElement('div');
+                    modalContainer.innerHTML = modalHtml;
+                    document.body.appendChild(modalContainer);
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('blockDetailModal'));
+                    modal.show();
+                    
+                    // 移除modal元素当关闭时
+                    document.getElementById('blockDetailModal').addEventListener('hidden.bs.modal', () => {
+                        modalContainer.remove();
+                    });
+                })
+                .catch(error => {
+                    console.error('获取区块详情失败:', error);
+                    alert('获取区块详情失败');
+                });
+        }
+
+        // 初始化网络拓扑图
+        async function initNetworkGraph() {
+            const chart = echarts.init(document.getElementById('network-graph'));
+            
+            // 获取节点数据
+            const peersRes = await fetch('/peers');
+            const peersData = await peersRes.json();
+            
+            // 获取网络拓扑数据
+            const networkRes = await fetch('/network_graph');
+            const networkData = await networkRes.json();
+
+            const option = {
+                tooltip: {
+                    formatter: params => {
+                        return `${params.data.name}<br>高度: ${params.data.height}<br>状态: ${params.data.status}`;
+                    }
+                },
+                series: [{
+                    type: 'graph',
+                    layout: 'force',
+                    data: peersData.data.map(peer => ({
+                        id: peer.name,
+                        name: peer.name,
+                        height: peer.height,
+                        status: peer.status,
+                        symbolSize: 30,
+                        itemStyle: {
+                            color: peer.status === 'syncing' ? '#91cc75' :
+                                  peer.status === 'outdated' ? '#ee6666' : '#5470c6'
+                        }
+                    })),
+                    links: networkData.data.links || [],
+                    roam: true,
+                    label: {
+                        show: true
+                    },
+                    force: {
+                        repulsion: 100
+                    },
+                    emphasis: {
+                        focus: 'adjacency'
+                    }
+                }]
+            };
+
+            chart.setOption(option);
+            
+            // 设置点击事件
+            chart.on('click', async params => {
+                if (params.data) {
+                    // 加载该节点的区块链
+                    const chainRes = await fetch(`/peer_chain?name=${params.data.name}`);
+                    const chainData = await chainRes.json();
+                    renderBlockchainGraph(chainData.data, params.data.name);
+                    
+                    // 更新标题
+                    document.querySelector('#blockchain-graph h5').textContent = 
+                        `节点 ${params.data.name} 的区块链 (高度: ${params.data.height})`;
+                }
+            });
+
+            return chart;
+        }
+
+        // 加载健康状态
+        async function loadHealth() {
+            const response = await fetch('/health');
+            const data = await response.json();
+            const container = document.getElementById('health-container');
+            
+            container.innerHTML = `
+                <div class="alert alert-success">
+                    <p><strong>状态:</strong> ${data.data.status}</p>
+                    <p><strong>区块高度:</strong> ${data.data.block_height}</p>
+                    <p><strong>交易池大小:</strong> ${data.data.pool_size}</p>
+                    <p><strong>节点数量:</strong> ${data.data.peers_count}</p>
+                    <p><strong>最新区块哈希:</strong> ${data.data.last_block_hash ? data.data.last_block_hash.substring(0, 20) + '...' : '无'}</p>
+                </div>
+            `;
+        }
+
+        // 页面加载时初始化
+        window.onload = async function() {
+            try {
+                console.log('开始初始化页面...');
+                // 初始化网络拓扑图
+                const networkChart = await initNetworkGraph();
+                console.log('网络拓扑图初始化完成');
+                
+                // 加载当前节点区块链
+                console.log('开始加载区块链数据...');
+                await loadChain();
+                console.log('区块链数据加载完成');
+                
+                // 加载节点状态
+                await loadPeers();
+                console.log('节点状态加载完成');
+                
+                // 加载健康状态
+                await loadHealth();
+                console.log('健康状态加载完成');
+                
+                // 设置实时更新
+                setupRealtimeUpdates();
+                console.log('实时更新设置完成');
+                
+                // 设置节点点击事件
+                setupNodeClick(networkChart);
+                console.log('节点点击事件设置完成');
+            } catch (error) {
+                console.error('页面初始化失败:', error);
+                alert('页面初始化失败，请查看控制台日志');
+            }
+        };
+
+        // 调试用：手动触发加载
+        setTimeout(() => {
+            console.log('5秒后尝试重新加载区块链...');
+            loadChain().catch(console.error);
+        }, 5000);
+    </script>
+</body>
+</html>
